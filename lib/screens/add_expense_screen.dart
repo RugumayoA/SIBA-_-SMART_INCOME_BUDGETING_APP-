@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
+//THIS IS THE ADD EXPENSE SCREEN
 
 class AddExpenseScreen extends StatefulWidget {
   final String? selectedCategoryId;
