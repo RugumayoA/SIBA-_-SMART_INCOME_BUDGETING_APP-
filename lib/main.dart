@@ -38,7 +38,26 @@ class MyApp extends StatelessWidget {
           useMaterial3: true,
           fontFamily: 'Roboto',
         ),
-        home: const LoginScreen(initialMode: LoginMode.signUp),
+        home: StreamBuilder<User?>(
+          stream: AuthService.authStateChanges,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+            
+            if (snapshot.hasData && snapshot.data != null) {
+              // User is logged in, show home screen
+              return const HomeScreen();
+            } else {
+              // User is not logged in, show login screen
+              return const LoginScreen(initialMode: LoginMode.signIn);
+            }
+          },
+        ),
       ),
     );
   }

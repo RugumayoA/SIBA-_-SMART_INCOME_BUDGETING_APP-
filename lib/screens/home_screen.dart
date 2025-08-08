@@ -10,6 +10,7 @@ import '../screens/add_expense_screen.dart';
 import '../screens/manage_accounts_screen.dart';
 import '../screens/add_income_to_account_screen.dart';
 import '../screens/transaction_history_screen.dart';
+import '../screens/auth/login_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
@@ -46,6 +47,11 @@ class HomeScreen extends StatelessWidget {
             onPressed: () {
               // TODO: Implement notifications
             },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: Colors.red),
+            onPressed: () => _handleLogout(context),
+            tooltip: 'Logout',
           ),
         ],
       ),
@@ -177,9 +183,9 @@ class HomeScreen extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.red),
               title: const Text('Logout', style: TextStyle(color: Colors.red)),
-              onTap: () async {
+              onTap: () {
                 Navigator.pop(context);
-                await AuthService.signOut();
+                _handleLogout(context);
               },
             ),
             ListTile(
@@ -510,5 +516,58 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Handle logout functionality
+  static Future<void> _handleLogout(BuildContext context) async {
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const AlertDialog(
+          content: Row(
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(width: 16),
+              Text('Logging out...'),
+            ],
+          ),
+        ),
+      );
+
+      // Sign out from Firebase
+      await AuthService.signOut();
+
+      // Close loading dialog
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+
+      // Navigate to login screen and clear navigation stack
+      if (context.mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (context) => const LoginScreen(initialMode: LoginMode.signIn),
+          ),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      // Close loading dialog if it's open
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+      
+      // Show error message
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Logout failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 } 
