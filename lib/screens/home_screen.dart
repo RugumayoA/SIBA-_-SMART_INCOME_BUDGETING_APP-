@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../providers/app_provider.dart';
+import '../services/auth_service.dart';
 import '../widgets/budget_category_card.dart';
 import '../widgets/transaction_item.dart';
 import '../screens/add_income_screen.dart';
@@ -80,6 +82,33 @@ class HomeScreen extends StatelessWidget {
                       fontSize: 14,
                     ),
                   ),
+                  const SizedBox(height: 10),
+                  // Show current user email
+                  if (FirebaseAuth.instance.currentUser != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.email, color: Colors.white, size: 16),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              FirebaseAuth.instance.currentUser!.email ?? 'Unknown',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -142,6 +171,15 @@ class HomeScreen extends StatelessWidget {
                     builder: (context) => const TransactionHistoryScreen(),
                   ),
                 );
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.logout, color: Colors.red),
+              title: const Text('Logout', style: TextStyle(color: Colors.red)),
+              onTap: () async {
+                Navigator.pop(context);
+                await AuthService.signOut();
               },
             ),
             ListTile(

@@ -44,13 +44,13 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyCD0l6ZS-9ayZDE5RLzzmtytNKtLTlN8lk',
-    appId: '1:377376225464:web:9db1a5bed032bf6ee95c4d',
+    apiKey: 'AIzaSyAREgWNuiwCYP-YD788QYFOjYRvJFuh9VA',
+    appId: '1:377376225464:web:000b361c66292636e95c4d',
     messagingSenderId: '377376225464',
     projectId: 'siba-a8e24',
     authDomain: 'siba-a8e24.firebaseapp.com',
     storageBucket: 'siba-a8e24.firebasestorage.app',
-    measurementId: 'G-ZZ4EHVRSNN',
+    measurementId: 'G-B7W53M6Y22',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -63,15 +63,15 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyCczktmkLJkblS1tFltlB7ao-JDm_cAqg8',
-    appId: '1:377376225464:ios:8ef793b9fae5fc05e95c4d',
+    appId: '1:377376225464:ios:4603e2a9ec3c22cee95c4d',
     messagingSenderId: '377376225464',
     projectId: 'siba-a8e24',
     storageBucket: 'siba-a8e24.firebasestorage.app',
-    iosBundleId: 'com.example.s',
+    iosBundleId: 'com.example.siba',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyCD0l6ZS-9ayZDE5RLzzmtytNKtLTlN8lk',
+    apiKey: 'AIzaSyAREgWNuiwCYP-YD788QYFOjYRvJFuh9VA',
     appId: '1:377376225464:web:000b361c66292636e95c4d',
     messagingSenderId: '377376225464',
     projectId: 'siba-a8e24',

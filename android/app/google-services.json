@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "377376225464",
+    "project_id": "siba-a8e24",
+    "storage_bucket": "siba-a8e24.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:377376225464:android:e9d9db96f781a660e95c4d",
+        "android_client_info": {
+          "package_name": "com.example.siba"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAREgWNuiwCYP-YD788QYFOjYRvJFuh9VA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,24 +1,69 @@
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import '../providers/app_provider.dart';
 
 class FirebaseService {
   static final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
   
   // Collections
   static const String _categoriesCollection = 'categories';
   static const String _transactionsCollection = 'transactions';
-  static const String _usersCollection = 'users';
 
-  // Get current user ID (for now, using a default user)
-  static String get _currentUserId => 'default_user';
+  // Get current user ID
+  static String get _currentUserId => _auth.currentUser?.uid ?? '';
+
+  // Test Firebase connection
+  static Future<bool> testFirebaseConnection() async {
+    try {
+      print('Testing Firebase connection...');
+      
+      // Check if Firebase is initialized
+      if (!Firebase.apps.isNotEmpty) {
+        print('Firebase is not initialized');
+        return false;
+      }
+      
+      // Test Firestore connection
+      final firestore = FirebaseFirestore.instance;
+      await firestore.collection('test').doc('test').get();
+      print('Firestore connection successful');
+      
+      // Test Auth connection
+      final auth = FirebaseAuth.instance;
+      print('Firebase Auth initialized successfully');
+      
+      return true;
+    } catch (e) {
+      print('Firebase connection test failed: $e');
+      return false;
+    }
+  }
+  
+  static Future<void> initializeFirebase() async {
+    try {
+      if (Firebase.apps.isEmpty) {
+        await Firebase.initializeApp();
+        print('Firebase initialized successfully');
+      } else {
+        print('Firebase already initialized');
+      }
+    } catch (e) {
+      print('Firebase initialization failed: $e');
+      throw Exception('Failed to initialize Firebase: $e');
+    }
+  }
 
   // Categories Operations
-  static Future<List<BudgetCategory>> getCategories() async {
+  static Future<List<BudgetCategory>> getCategories(String projectId) async {
     try {
       final snapshot = await _firestore
-          .collection(_usersCollection)
+          .collection('users')
           .doc(_currentUserId)
+          .collection('projects')
+          .doc(projectId)
           .collection(_categoriesCollection)
           .get();
       
@@ -39,11 +84,13 @@ class FirebaseService {
     }
   }
 
-  static Future<void> saveCategory(BudgetCategory category) async {
+  static Future<void> saveCategory(BudgetCategory category, String projectId) async {
     try {
       await _firestore
-          .collection(_usersCollection)
+          .collection('users')
           .doc(_currentUserId)
+          .collection('projects')
+          .doc(projectId)
           .collection(_categoriesCollection)
           .doc(category.id)
           .set({
@@ -59,11 +106,13 @@ class FirebaseService {
     }
   }
 
-  static Future<void> updateCategory(BudgetCategory category) async {
+  static Future<void> updateCategory(BudgetCategory category, String projectId) async {
     try {
       await _firestore
-          .collection(_usersCollection)
+          .collection('users')
           .doc(_currentUserId)
+          .collection('projects')
+          .doc(projectId)
           .collection(_categoriesCollection)
           .doc(category.id)
           .update({
@@ -79,11 +128,13 @@ class FirebaseService {
     }
   }
 
-  static Future<void> deleteCategory(String categoryId) async {
+  static Future<void> deleteCategory(String categoryId, String projectId) async {
     try {
       await _firestore
-          .collection(_usersCollection)
+          .collection('users')
           .doc(_currentUserId)
+          .collection('projects')
+          .doc(projectId)
           .collection(_categoriesCollection)
           .doc(categoryId)
           .delete();
@@ -94,11 +145,13 @@ class FirebaseService {
   }
 
   // Transactions Operations
-  static Future<List<TransactionModel>> getTransactions() async {
+  static Future<List<TransactionModel>> getTransactions(String projectId) async {
     try {
       final snapshot = await _firestore
-          .collection(_usersCollection)
+          .collection('users')
           .doc(_currentUserId)
+          .collection('projects')
+          .doc(projectId)
           .collection(_transactionsCollection)
           .orderBy('date', descending: true)
           .get();
@@ -121,11 +174,13 @@ class FirebaseService {
     }
   }
 
-  static Future<void> saveTransaction(TransactionModel transaction) async {
+  static Future<void> saveTransaction(TransactionModel transaction, String projectId) async {
     try {
       await _firestore
-          .collection(_usersCollection)
+          .collection('users')
           .doc(_currentUserId)
+          .collection('projects')
+          .doc(projectId)
           .collection(_transactionsCollection)
           .add({
         'categoryId': transaction.categoryId,
@@ -142,9 +197,9 @@ class FirebaseService {
   }
 
   // Initialize default categories if none exist
-  static Future<void> initializeDefaultCategories() async {
+  static Future<void> initializeDefaultCategories(String projectId) async {
     try {
-      final categories = await getCategories();
+      final categories = await getCategories(projectId);
       if (categories.isEmpty) {
         print('No categories found, initializing defaults...');
         
@@ -180,7 +235,7 @@ class FirebaseService {
         ];
 
         for (var category in defaultCategories) {
-          await saveCategory(category);
+          await saveCategory(category, projectId);
         }
         print('Default categories initialized');
       }

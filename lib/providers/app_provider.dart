@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/firebase_service.dart';
+import '../services/project_service.dart';
+import '../models/project.dart';
 
 class BudgetCategory {
   final String id;
@@ -95,9 +97,13 @@ class AppProvider extends ChangeNotifier {
   List<BudgetCategory> _categories = [];
   List<TransactionModel> _transactions = [];
   double _totalIncome = 0.0;
+  Project? _currentProject;
+  List<Project> _projects = [];
 
   bool get isDarkMode => _isDarkMode;
   String get userName => _userName;
+  Project? get currentProject => _currentProject;
+  List<Project> get projects => _projects;
   int get selectedIndex => _selectedIndex;
   List<BudgetCategory> get categories => _categories;
   List<TransactionModel> get transactions => _transactions;
@@ -120,19 +126,48 @@ class AppProvider extends ChangeNotifier {
     try {
       print('Loading data from Firebase...');
       
-      // Initialize default categories if needed
-      await FirebaseService.initializeDefaultCategories();
+      // Load projects first
+      _projects = await ProjectService.getProjects();
+      print('Loaded ${_projects.length} projects from Firebase');
       
-      // Load categories from Firebase
-      _categories = await FirebaseService.getCategories();
-      print('Loaded ${_categories.length} categories from Firebase');
-      for (var category in _categories) {
-        print('  - ${category.name} (ID: ${category.id}): Balance=${category.currentBalance}');
+      // If no projects exist, create a default project
+      if (_projects.isEmpty) {
+        var defaultProject = Project(
+          id: '',
+          name: 'Default Project',
+          description: 'My first budget project',
+          createdAt: DateTime.now(),
+          color: Colors.blue,
+          totalBudget: 1500000, // 1.5M
+          currentBalance: 1500000,
+        );
+        
+        final projectId = await ProjectService.createProject(defaultProject);
+        if (projectId != null) {
+          defaultProject = defaultProject.copyWith(id: projectId);
+          _projects.add(defaultProject);
+          _currentProject = defaultProject;
+        }
+      } else {
+        // Select the first project as current
+        _currentProject = _projects.first;
       }
       
-      // Load transactions from Firebase
-      _transactions = await FirebaseService.getTransactions();
-      print('Loaded ${_transactions.length} transactions from Firebase');
+      if (_currentProject != null) {
+        // Initialize default categories if needed
+        await FirebaseService.initializeDefaultCategories(_currentProject!.id);
+        
+        // Load categories from Firebase
+        _categories = await FirebaseService.getCategories(_currentProject!.id);
+        print('Loaded ${_categories.length} categories from Firebase');
+        for (var category in _categories) {
+          print('  - ${category.name} (ID: ${category.id}): Balance=${category.currentBalance}');
+        }
+        
+        // Load transactions from Firebase
+        _transactions = await FirebaseService.getTransactions(_currentProject!.id);
+        print('Loaded ${_transactions.length} transactions from Firebase');
+      }
       
       print('Data loaded successfully from Firebase');
       print('Total money: $totalMoney');
@@ -182,7 +217,9 @@ class AppProvider extends ChangeNotifier {
       );
       
       // Save updated category to Firebase
-      await FirebaseService.updateCategory(_categories[categoryIndex]);
+      if (_currentProject != null) {
+        await FirebaseService.updateCategory(_categories[categoryIndex], _currentProject!.id);
+      }
     } else {
       print('Category not found: $categoryId');
     }
@@ -200,7 +237,9 @@ class AppProvider extends ChangeNotifier {
     _transactions.add(transaction);
 
     // Save transaction to Firebase
-    await FirebaseService.saveTransaction(transaction);
+    if (_currentProject != null) {
+      await FirebaseService.saveTransaction(transaction, _currentProject!.id);
+    }
 
     print('Transaction added: ${transaction.id}');
     print('Total transactions: ${_transactions.length}');
@@ -236,7 +275,9 @@ class AppProvider extends ChangeNotifier {
       );
       
       // Save updated category to Firebase
-      await FirebaseService.updateCategory(_categories[categoryIndex]);
+      if (_currentProject != null) {
+        await FirebaseService.updateCategory(_categories[categoryIndex], _currentProject!.id);
+      }
     } else {
       print('Category not found: $categoryId');
     }
@@ -254,7 +295,9 @@ class AppProvider extends ChangeNotifier {
     _transactions.add(transaction);
 
     // Save transaction to Firebase
-    await FirebaseService.saveTransaction(transaction);
+    if (_currentProject != null) {
+      await FirebaseService.saveTransaction(transaction, _currentProject!.id);
+    }
 
     print('Transaction added: ${transaction.id}');
     print('Total transactions: ${_transactions.length}');
@@ -281,7 +324,9 @@ class AppProvider extends ChangeNotifier {
         );
         
         // Save updated category to Firebase
-        await FirebaseService.updateCategory(_categories[categoryIndex]);
+        if (_currentProject != null) {
+          await FirebaseService.updateCategory(_categories[categoryIndex], _currentProject!.id);
+        }
       }
     }
 
@@ -298,7 +343,9 @@ class AppProvider extends ChangeNotifier {
     _transactions.add(transaction);
 
     // Save transaction to Firebase
-    await FirebaseService.saveTransaction(transaction);
+    if (_currentProject != null) {
+      await FirebaseService.saveTransaction(transaction, _currentProject!.id);
+    }
 
     notifyListeners();
   }
@@ -319,7 +366,9 @@ class AppProvider extends ChangeNotifier {
     _categories.add(category);
     
     // Save new category to Firebase
-    await FirebaseService.saveCategory(category);
+    if (_currentProject != null) {
+      await FirebaseService.saveCategory(category, _currentProject!.id);
+    }
     
     notifyListeners();
   }
@@ -343,7 +392,9 @@ class AppProvider extends ChangeNotifier {
       );
       
       // Save updated category to Firebase
-      await FirebaseService.updateCategory(_categories[categoryIndex]);
+      if (_currentProject != null) {
+        await FirebaseService.updateCategory(_categories[categoryIndex], _currentProject!.id);
+      }
       
       print('Category updated in Firebase');
       notifyListeners();
@@ -356,7 +407,9 @@ class AppProvider extends ChangeNotifier {
     _categories.removeWhere((c) => c.id == id);
     
     // Delete category from Firebase
-    await FirebaseService.deleteCategory(id);
+    if (_currentProject != null) {
+      await FirebaseService.deleteCategory(id, _currentProject!.id);
+    }
     
     notifyListeners();
   }
@@ -376,5 +429,48 @@ class AppProvider extends ChangeNotifier {
     final sortedTransactions = List<TransactionModel>.from(_transactions);
     sortedTransactions.sort((a, b) => b.date.compareTo(a.date));
     return sortedTransactions;
+  }
+
+  // Project management methods
+  Future<void> createProject(Project project) async {
+    final projectId = await ProjectService.createProject(project);
+    if (projectId != null) {
+      final newProject = project.copyWith(id: projectId);
+      _projects.add(newProject);
+      _currentProject = newProject;
+      notifyListeners();
+    }
+  }
+
+  Future<void> selectProject(Project project) async {
+    _currentProject = project;
+    
+    // Load categories and transactions for the selected project
+    if (_currentProject != null) {
+      _categories = await FirebaseService.getCategories(_currentProject!.id);
+      _transactions = await FirebaseService.getTransactions(_currentProject!.id);
+      notifyListeners();
+    }
+  }
+
+  Future<void> updateProject(Project project) async {
+    await ProjectService.updateProject(project);
+    final index = _projects.indexWhere((p) => p.id == project.id);
+    if (index != -1) {
+      _projects[index] = project;
+      if (_currentProject?.id == project.id) {
+        _currentProject = project;
+      }
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteProject(String projectId) async {
+    await ProjectService.deleteProject(projectId);
+    _projects.removeWhere((p) => p.id == projectId);
+    if (_currentProject?.id == projectId) {
+      _currentProject = _projects.isNotEmpty ? _projects.first : null;
+    }
+    notifyListeners();
   }
 } 
