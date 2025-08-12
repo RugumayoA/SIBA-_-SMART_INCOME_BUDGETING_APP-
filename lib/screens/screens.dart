@@ -1,4 +1,5 @@
 export 'home_screen.dart';
+export 'projects_screen.dart';
 export 'add_income_screen.dart';
 export 'add_expense_screen.dart';
 export 'manage_accounts_screen.dart';

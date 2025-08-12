@@ -10,6 +10,7 @@ import '../screens/add_expense_screen.dart';
 import '../screens/manage_accounts_screen.dart';
 import '../screens/add_income_to_account_screen.dart';
 import '../screens/transaction_history_screen.dart';
+import '../screens/projects_screen.dart';
 import '../screens/auth/login_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -17,115 +18,185 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Dashboard',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.menu),
-          onPressed: () {
-            Scaffold.of(context).openDrawer();
-          },
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_balance_wallet),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ManageAccountsScreen(),
-                ),
-              );
-            },
-            tooltip: 'Manage Accounts',
-          ),
-          IconButton(
-            icon: const Icon(Icons.notifications),
-            onPressed: () {
-              // TODO: Implement notifications
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.red),
-            onPressed: () => _handleLogout(context),
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
-      drawer: Drawer(
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: BoxDecoration(
-                color: Colors.blue,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const CircleAvatar(
-                    radius: 30,
-                    backgroundColor: Colors.white,
-                    child: Icon(Icons.account_balance_wallet, size: 35, color: Colors.blue),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'SIBA Budget Manager',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
+    return Consumer<AppProvider>(
+      builder: (context, provider, child) {
+        return Scaffold(
+          appBar: AppBar(
+            centerTitle: true,
+            title: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (provider.currentProject != null) ...[
                   Text(
-                    'Manage your finances',
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.8),
-                      fontSize: 14,
+                    provider.currentProject!.name,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 20,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 10),
-                  // Show current user email
-                  if (FirebaseAuth.instance.currentUser != null) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.email, color: Colors.white, size: 16),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              FirebaseAuth.instance.currentUser!.email ?? 'Unknown',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
+                  const Text(
+                    'Dashboard',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
                     ),
-                  ],
+                    textAlign: TextAlign.center,
+                  ),
+                ] else ...[
+                  const Text(
+                    'SIBA Dashboard',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold, 
+                      fontSize: 20,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
                 ],
-              ),
+              ],
             ),
-            ListTile(
-              leading: const Icon(Icons.dashboard),
-              title: const Text('Dashboard'),
-              selected: true,
-              onTap: () {
-                Navigator.pop(context);
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProjectsScreen(),
+                  ),
+                );
               },
+              tooltip: 'Back to Projects',
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.folder),
+                onPressed: () {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ProjectsScreen(),
+                    ),
+                  );
+                },
+                tooltip: 'Switch Project',
+              ),
+              IconButton(
+                icon: const Icon(Icons.account_balance_wallet),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ManageAccountsScreen(),
+                    ),
+                  );
+                },
+                tooltip: 'Manage Accounts',
+              ),
+              IconButton(
+                icon: const Icon(Icons.notifications),
+                onPressed: () {
+                  // TODO: Implement notifications
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () => _refreshData(context),
+                tooltip: 'Refresh Data',
+              ),
+              IconButton(
+                icon: const Icon(Icons.logout, color: Colors.red),
+                onPressed: () => _handleLogout(context),
+                tooltip: 'Logout',
+              ),
+            ],
+          ),
+          drawer: Drawer(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                DrawerHeader(
+                  decoration: BoxDecoration(
+                    color: provider.currentProject?.color ?? Colors.blue,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const CircleAvatar(
+                        radius: 30,
+                        backgroundColor: Colors.white,
+                        child: Icon(Icons.folder, size: 35, color: Colors.blue),
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        provider.currentProject?.name ?? 'SIBA Budget Manager',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        provider.currentProject?.description ?? 'Manage your finances',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 14,
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 10),
+                      // Show current user email
+                      if (FirebaseAuth.instance.currentUser != null) ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.email, color: Colors.white, size: 16),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  FirebaseAuth.instance.currentUser!.email ?? 'Unknown',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 12,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.folder),
+                  title: const Text('Switch Project'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ProjectsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.dashboard),
+                  title: const Text('Dashboard'),
+                  selected: true,
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
             ListTile(
               leading: const Icon(Icons.account_balance_wallet),
               title: const Text('Manage Accounts'),
@@ -204,12 +275,10 @@ class HomeScreen extends StatelessWidget {
                 // TODO: Navigate to help screen
               },
             ),
-          ],
-        ),
-      ),
-      body: Consumer<AppProvider>(
-        builder: (context, provider, child) {
-          return SingleChildScrollView(
+              ],
+            ),
+          ),
+          body: SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -431,21 +500,21 @@ class HomeScreen extends StatelessWidget {
                   ),
               ],
             ),
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const AddExpenseScreen(),
-            ),
-          );
-        },
-        backgroundColor: Colors.orange,
-        child: const Icon(Icons.remove, color: Colors.white),
-      ),
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AddExpenseScreen(),
+                ),
+              );
+            },
+            backgroundColor: Colors.orange,
+            child: const Icon(Icons.remove, color: Colors.white),
+          ),
+        );
+      },
     );
   }
 
@@ -516,6 +585,56 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  // Handle data refresh
+  static Future<void> _refreshData(BuildContext context) async {
+    final provider = Provider.of<AppProvider>(context, listen: false);
+    
+    try {
+      // Show loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+              SizedBox(width: 16),
+              Text('Refreshing data...'),
+            ],
+          ),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // Reload data
+      await provider.reloadData();
+
+      // Show success message
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Data refreshed successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      // Show error message
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to refresh data: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   // Handle logout functionality

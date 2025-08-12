@@ -147,6 +147,7 @@ class FirebaseService {
   // Transactions Operations
   static Future<List<TransactionModel>> getTransactions(String projectId) async {
     try {
+      print('🔥 Getting transactions for project: $projectId');
       final snapshot = await _firestore
           .collection('users')
           .doc(_currentUserId)
@@ -156,27 +157,62 @@ class FirebaseService {
           .orderBy('date', descending: true)
           .get();
       
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
-        return TransactionModel(
-          id: doc.id,
-          categoryId: data['categoryId'] ?? '',
-          description: data['description'] ?? '',
-          amount: (data['amount'] ?? 0).toDouble(),
-          date: (data['date'] as Timestamp).toDate(),
-          isExpense: data['isExpense'] ?? false,
-          categoryName: data['categoryName'] ?? '',
-        );
-      }).toList();
+      print('🔥 Found ${snapshot.docs.length} transaction documents');
+      
+      List<TransactionModel> transactions = [];
+      
+      for (var doc in snapshot.docs) {
+        try {
+          final data = doc.data();
+          print('🔥 Processing transaction doc: ${doc.id}');
+          print('🔥 Raw data: $data');
+          
+          // Handle different date formats
+          DateTime transactionDate;
+          if (data['date'] is Timestamp) {
+            transactionDate = (data['date'] as Timestamp).toDate();
+          } else if (data['date'] is String) {
+            transactionDate = DateTime.parse(data['date'] as String);
+          } else {
+            print('🔥 Warning: Unknown date format, using current time');
+            transactionDate = DateTime.now();
+          }
+          
+          final transaction = TransactionModel(
+            id: doc.id,
+            categoryId: data['categoryId'] ?? '',
+            description: data['description'] ?? '',
+            amount: (data['amount'] ?? 0).toDouble(),
+            date: transactionDate,
+            isExpense: data['isExpense'] ?? false,
+            categoryName: data['categoryName'] ?? '',
+          );
+          
+          transactions.add(transaction);
+          print('🔥 Successfully parsed transaction: ${transaction.description}');
+        } catch (e) {
+          print('🔥 Error parsing individual transaction ${doc.id}: $e');
+          continue; // Skip this transaction but continue with others
+        }
+      }
+      
+      print('🔥 Successfully loaded ${transactions.length} transactions');
+      return transactions;
     } catch (e) {
-      print('Error getting transactions: $e');
+      print('🔥 Error getting transactions: $e');
+      print('🔥 Error type: ${e.runtimeType}');
       return [];
     }
   }
 
   static Future<void> saveTransaction(TransactionModel transaction, String projectId) async {
     try {
-      await _firestore
+      print('🔥 FirebaseService: Attempting to save transaction...');
+      print('🔥 Current User ID: $_currentUserId');
+      print('🔥 Project ID: $projectId');
+      print('🔥 Transaction Details: ${transaction.description} - ${transaction.amount}');
+      
+      final docRef = await _firestore
           .collection('users')
           .doc(_currentUserId)
           .collection('projects')
@@ -190,9 +226,12 @@ class FirebaseService {
         'isExpense': transaction.isExpense,
         'categoryName': transaction.categoryName,
       });
-      print('Transaction saved successfully: ${transaction.description}');
+      print('🔥 Transaction saved successfully with ID: ${docRef.id}');
+      print('🔥 Transaction description: ${transaction.description}');
     } catch (e) {
-      print('Error saving transaction: $e');
+      print('🔥 Error saving transaction: $e');
+      print('🔥 Error details: ${e.toString()}');
+      rethrow; // Re-throw the error so it can be caught by the caller
     }
   }
 
@@ -206,31 +245,24 @@ class FirebaseService {
         final defaultCategories = [
           BudgetCategory(
             id: '1',
-            name: 'Airtime',
-            allocatedAmount: 200000,
-            currentBalance: 200000,
-            color: Colors.blue,
+            name: 'Fuel',
+            allocatedAmount: 0,
+            currentBalance: 0,
+            color: Colors.orange,
           ),
           BudgetCategory(
             id: '2',
-            name: 'Food',
-            allocatedAmount: 400000,
-            currentBalance: 400000,
+            name: 'food',
+            allocatedAmount: 0,
+            currentBalance: 0,
             color: Colors.green,
           ),
           BudgetCategory(
             id: '3',
-            name: 'Clothes',
-            allocatedAmount: 600000,
-            currentBalance: 600000,
-            color: Colors.orange,
-          ),
-          BudgetCategory(
-            id: '4',
-            name: 'Savings',
-            allocatedAmount: 300000,
-            currentBalance: 300000,
-            color: Colors.purple,
+            name: 'Rent',
+            allocatedAmount: 0,
+            currentBalance: 0,
+            color: Colors.blue,
           ),
         ];
 

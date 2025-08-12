@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firebase_service.dart';
 import '../services/project_service.dart';
+import '../services/auth_service.dart';
 import '../models/project.dart';
 
 class BudgetCategory {
@@ -109,26 +111,49 @@ class AppProvider extends ChangeNotifier {
   List<TransactionModel> get transactions => _transactions;
   double get totalIncome => _totalIncome;
 
-  // Total money across all accounts (current balance minus spent)
+  // Total money across all accounts (current balance)
   double get totalMoney => _categories.fold(0.0, (sum, category) => sum + category.currentBalance);
   
   // Total spent across all accounts
   double get totalSpent => _categories.fold(0.0, (sum, category) => sum + category.spentAmount);
   
-  // Total available money (current balance minus spent)
-  double get totalAvailable => totalMoney - totalSpent;
+  // Total available money (same as total money since currentBalance already accounts for spending)
+  double get totalAvailable => totalMoney;
 
   AppProvider() {
-    _loadData();
+    print('AppProvider constructor called');
+    // Listen to authentication state changes
+    AuthService.authStateChanges.listen((User? user) {
+      if (user != null) {
+        // User is authenticated, load data
+        print('🔐 User authenticated: ${user.email}, loading data...');
+        _loadData();
+      } else {
+        // User is not authenticated, clear data
+        print('🚪 User not authenticated, clearing data...');
+        _clearData();
+      }
+    });
+  }
+
+  void _clearData() {
+    _categories.clear();
+    _transactions.clear();
+    _projects.clear();
+    _currentProject = null;
+    _totalIncome = 0.0;
+    print('Data cleared');
+    notifyListeners();
   }
 
   Future<void> _loadData() async {
     try {
-      print('Loading data from Firebase...');
+      print('📦 Loading data from Firebase...');
+      print('📦 Current user: ${AuthService.currentUser?.email ?? "None"}');
       
       // Load projects first
       _projects = await ProjectService.getProjects();
-      print('Loaded ${_projects.length} projects from Firebase');
+      print('📦 Loaded ${_projects.length} projects from Firebase');
       
       // If no projects exist, create a default project
       if (_projects.isEmpty) {
@@ -138,8 +163,8 @@ class AppProvider extends ChangeNotifier {
           description: 'My first budget project',
           createdAt: DateTime.now(),
           color: Colors.blue,
-          totalBudget: 1500000, // 1.5M
-          currentBalance: 1500000,
+          totalBudget: 0,
+          currentBalance: 0,
         );
         
         final projectId = await ProjectService.createProject(defaultProject);
@@ -166,7 +191,10 @@ class AppProvider extends ChangeNotifier {
         
         // Load transactions from Firebase
         _transactions = await FirebaseService.getTransactions(_currentProject!.id);
-        print('Loaded ${_transactions.length} transactions from Firebase');
+        print('📦 Loaded ${_transactions.length} transactions from Firebase');
+        for (var transaction in _transactions) {
+          print('  📄 Transaction: ${transaction.description} - ${transaction.amount} (${transaction.isExpense ? "Expense" : "Income"})');
+        }
       }
       
       print('Data loaded successfully from Firebase');
@@ -176,6 +204,16 @@ class AppProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       print('Error loading data from Firebase: $e');
+    }
+  }
+
+  // Public method to reload data
+  Future<void> reloadData() async {
+    if (AuthService.currentUser != null) {
+      print('Manually reloading data...');
+      await _loadData();
+    } else {
+      print('Cannot reload data: User not authenticated');
     }
   }
 
@@ -238,12 +276,18 @@ class AppProvider extends ChangeNotifier {
 
     // Save transaction to Firebase
     if (_currentProject != null) {
+      print('💾 Saving INCOME transaction to Firebase...');
+      print('  💾 Project ID: ${_currentProject!.id}');
+      print('  💾 Transaction: ${transaction.description} - ${transaction.amount}');
       await FirebaseService.saveTransaction(transaction, _currentProject!.id);
+      print('💾 INCOME transaction saved to Firebase successfully');
+    } else {
+      print('❌ No current project found, cannot save INCOME transaction');
     }
 
-    print('Transaction added: ${transaction.id}');
-    print('Total transactions: ${_transactions.length}');
-    print('Data saved to Firebase');
+    print('📊 INCOME Transaction added: ${transaction.id}');
+    print('📊 Total transactions: ${_transactions.length}');
+    print('📊 Data saved to Firebase');
 
     notifyListeners();
   }
@@ -296,12 +340,18 @@ class AppProvider extends ChangeNotifier {
 
     // Save transaction to Firebase
     if (_currentProject != null) {
+      print('💾 Saving EXPENSE transaction to Firebase...');
+      print('  💾 Project ID: ${_currentProject!.id}');
+      print('  💾 Transaction: ${transaction.description} - ${transaction.amount}');
       await FirebaseService.saveTransaction(transaction, _currentProject!.id);
+      print('💾 EXPENSE transaction saved to Firebase successfully');
+    } else {
+      print('❌ No current project found, cannot save EXPENSE transaction');
     }
 
-    print('Transaction added: ${transaction.id}');
-    print('Total transactions: ${_transactions.length}');
-    print('Data saved to Firebase');
+    print('📊 EXPENSE Transaction added: ${transaction.id}');
+    print('📊 Total transactions: ${_transactions.length}');
+    print('📊 Data saved to Firebase');
 
     notifyListeners();
   }
@@ -381,13 +431,26 @@ class AppProvider extends ChangeNotifier {
       print('Found category at index $categoryIndex: ${_categories[categoryIndex].name}');
       print('Old name: ${_categories[categoryIndex].name}');
       print('New name: $name');
+      print('Old allocated amount: ${_categories[categoryIndex].allocatedAmount}');
+      print('New allocated amount: $allocatedAmount');
+      print('Old current balance: ${_categories[categoryIndex].currentBalance}');
+      
+      // Calculate the difference in allocated amount
+      final oldAllocated = _categories[categoryIndex].allocatedAmount;
+      final allocationDifference = allocatedAmount - oldAllocated;
+      
+      // Update current balance by the difference in allocation
+      final newCurrentBalance = _categories[categoryIndex].currentBalance + allocationDifference;
+      
+      print('Allocation difference: $allocationDifference');
+      print('New current balance: $newCurrentBalance');
       
       _categories[categoryIndex] = BudgetCategory(
         id: id,
         name: name,
         allocatedAmount: allocatedAmount,
         spentAmount: _categories[categoryIndex].spentAmount,
-        currentBalance: _categories[categoryIndex].currentBalance,
+        currentBalance: newCurrentBalance,
         color: color,
       );
       
@@ -397,6 +460,8 @@ class AppProvider extends ChangeNotifier {
       }
       
       print('Category updated in Firebase');
+      print('Total money after update: $totalMoney');
+      print('Total available after update: $totalAvailable');
       notifyListeners();
     } else {
       print('Category not found with id: $id');

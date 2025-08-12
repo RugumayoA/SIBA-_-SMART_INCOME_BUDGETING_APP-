@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
 import 'screens/home_screen.dart';
+import 'screens/projects_screen.dart';
 import 'screens/auth/login_screen.dart';
 import 'providers/app_provider.dart';
 import 'services/firebase_service.dart';
@@ -50,8 +51,8 @@ class MyApp extends StatelessWidget {
             }
             
             if (snapshot.hasData && snapshot.data != null) {
-              // User is logged in, show home screen
-              return const HomeScreen();
+              // User is logged in, show projects screen
+              return const ProjectsScreen();
             } else {
               // User is not logged in, show login screen
               return const LoginScreen(initialMode: LoginMode.signIn);

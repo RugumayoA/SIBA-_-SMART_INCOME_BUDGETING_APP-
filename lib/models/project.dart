@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class Project {
   final String id;
@@ -35,14 +36,32 @@ class Project {
   }
 
   factory Project.fromJson(Map<String, dynamic> json) {
+    // Handle different date formats for createdAt
+    DateTime createdAt;
+    if (json['createdAt'] is Timestamp) {
+      createdAt = (json['createdAt'] as Timestamp).toDate();
+    } else if (json['createdAt'] is String) {
+      createdAt = DateTime.parse(json['createdAt'] as String);
+    } else {
+      createdAt = DateTime.now(); // Fallback
+    }
+
+    // Handle different date formats for lastModified
+    DateTime? lastModified;
+    if (json['lastModified'] is Timestamp) {
+      lastModified = (json['lastModified'] as Timestamp).toDate();
+    } else if (json['lastModified'] is String) {
+      lastModified = DateTime.parse(json['lastModified'] as String);
+    } else {
+      lastModified = null;
+    }
+
     return Project(
       id: json['id'],
       name: json['name'],
       description: json['description'],
-      createdAt: DateTime.parse(json['createdAt']),
-      lastModified: json['lastModified'] != null 
-          ? DateTime.parse(json['lastModified']) 
-          : null,
+      createdAt: createdAt,
+      lastModified: lastModified,
       color: Color(json['color']),
       totalBudget: json['totalBudget']?.toDouble() ?? 0.0,
       currentBalance: json['currentBalance']?.toDouble() ?? 0.0,
