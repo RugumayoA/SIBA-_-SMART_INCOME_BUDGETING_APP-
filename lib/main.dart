@@ -9,6 +9,7 @@ import 'screens/auth/login_screen.dart';
 import 'providers/app_provider.dart';
 import 'services/firebase_service.dart';
 import 'services/auth_service.dart';
+import 'services/theme_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,37 +29,36 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
       create: (context) => AppProvider(),
-      child: MaterialApp(
-        title: 'SIBA App',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF6750A4),
-            brightness: Brightness.light,
-          ),
-          useMaterial3: true,
-          fontFamily: 'Roboto',
-        ),
-        home: StreamBuilder<User?>(
-          stream: AuthService.authStateChanges,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              );
-            }
-            
-            if (snapshot.hasData && snapshot.data != null) {
-              // User is logged in, show projects screen
-              return const ProjectsScreen();
-            } else {
-              // User is not logged in, show login screen
-              return const LoginScreen(initialMode: LoginMode.signIn);
-            }
-          },
-        ),
+      child: Consumer<AppProvider>(
+        builder: (context, appProvider, child) {
+          return MaterialApp(
+            title: 'SIBA App',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeService.lightTheme,
+            darkTheme: ThemeService.darkTheme,
+            themeMode: appProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
+            home: StreamBuilder<User?>(
+              stream: AuthService.authStateChanges,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Scaffold(
+                    body: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+                
+                if (snapshot.hasData && snapshot.data != null) {
+                  // User is logged in, show projects screen
+                  return const ProjectsScreen();
+                } else {
+                  // User is not logged in, show login screen
+                  return const LoginScreen(initialMode: LoginMode.signIn);
+                }
+              },
+            ),
+          );
+        },
       ),
     );
   }

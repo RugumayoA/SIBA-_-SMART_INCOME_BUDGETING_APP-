@@ -8,6 +8,7 @@ import '../utils/currency_formatter.dart';
 import '../screens/home_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../services/auth_service.dart';
+import '../widgets/theme_toggle_button.dart';
 
 class ProjectsScreen extends StatefulWidget {
   const ProjectsScreen({super.key});
@@ -26,6 +27,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
+          const ThemeToggleButton(),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () => _refreshData(context),

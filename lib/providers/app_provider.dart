@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firebase_service.dart';
 import '../services/project_service.dart';
 import '../services/auth_service.dart';
+import '../services/theme_service.dart';
 import '../models/project.dart';
 
 
@@ -123,6 +124,7 @@ class AppProvider extends ChangeNotifier {
 
   AppProvider() {
     print('AppProvider constructor called');
+    _loadThemePreference();
     // Listen to authentication state changes
     AuthService.authStateChanges.listen((User? user) {
       if (user != null) {
@@ -244,8 +246,15 @@ class AppProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // Load theme preference from storage
+  Future<void> _loadThemePreference() async {
+    _isDarkMode = await ThemeService.loadThemeMode();
+    notifyListeners();
+  }
+
   Future<void> toggleTheme() async {
     _isDarkMode = !_isDarkMode;
+    await ThemeService.saveThemeMode(_isDarkMode);
     notifyListeners();
   }
 

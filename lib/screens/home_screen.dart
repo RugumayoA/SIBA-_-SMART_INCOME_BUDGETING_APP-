@@ -5,6 +5,7 @@ import '../providers/app_provider.dart';
 import '../services/auth_service.dart';
 import '../widgets/budget_category_card.dart';
 import '../widgets/transaction_item.dart';
+import '../widgets/theme_toggle_button.dart';
 import '../utils/currency_formatter.dart';
 import '../screens/add_income_screen.dart';
 import '../screens/add_expense_screen.dart';
@@ -328,6 +329,22 @@ class HomeScreen extends StatelessWidget {
                     );
                   },
                 ),
+                const Divider(),
+                
+                // Settings Section
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(
+                    'Settings',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
+                const ThemeToggleListTile(),
+                
                 const Divider(),
                 
                 // Account Section
