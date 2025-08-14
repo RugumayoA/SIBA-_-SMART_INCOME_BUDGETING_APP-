@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'currency.dart';
 
 class Project {
   final String id;
@@ -10,6 +11,7 @@ class Project {
   final Color color;
   final double totalBudget;
   final double currentBalance;
+  final Currency currency;
 
   Project({
     required this.id,
@@ -20,6 +22,7 @@ class Project {
     required this.color,
     this.totalBudget = 0.0,
     this.currentBalance = 0.0,
+    this.currency = Currencies.ugx,
   });
 
   Map<String, dynamic> toJson() {
@@ -32,6 +35,7 @@ class Project {
       'color': color.value,
       'totalBudget': totalBudget,
       'currentBalance': currentBalance,
+      'currency': currency.toJson(),
     };
   }
 
@@ -56,6 +60,17 @@ class Project {
       lastModified = null;
     }
 
+    // Handle currency
+    Currency currency = Currencies.ugx; // Default to UGX for backward compatibility
+    if (json['currency'] != null) {
+      if (json['currency'] is Map) {
+        currency = Currency.fromJson(json['currency']);
+      } else if (json['currency'] is String) {
+        // Handle legacy string format
+        currency = Currencies.getByCode(json['currency']) ?? Currencies.ugx;
+      }
+    }
+
     return Project(
       id: json['id'],
       name: json['name'],
@@ -65,6 +80,7 @@ class Project {
       color: Color(json['color']),
       totalBudget: json['totalBudget']?.toDouble() ?? 0.0,
       currentBalance: json['currentBalance']?.toDouble() ?? 0.0,
+      currency: currency,
     );
   }
 
@@ -77,6 +93,7 @@ class Project {
     Color? color,
     double? totalBudget,
     double? currentBalance,
+    Currency? currency,
   }) {
     return Project(
       id: id ?? this.id,
@@ -87,6 +104,7 @@ class Project {
       color: color ?? this.color,
       totalBudget: totalBudget ?? this.totalBudget,
       currentBalance: currentBalance ?? this.currentBalance,
+      currency: currency ?? this.currency,
     );
   }
 } 

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
+import '../utils/currency_formatter.dart';
 
 class BudgetCategoryCard extends StatelessWidget {
   final BudgetCategory category;
@@ -13,6 +15,9 @@ class BudgetCategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<AppProvider>(context);
+    final currency = provider.currentProject?.currency;
+    
     return Card(
       elevation: 2,
       child: InkWell(
@@ -48,7 +53,9 @@ class BudgetCategoryCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'UGX ${category.currentBalance.toStringAsFixed(0)}',
+                currency != null 
+                  ? CurrencyFormatter.formatCurrency(category.currentBalance, currency)
+                  : CurrencyFormatter.formatUGX(category.currentBalance),
                 style: const TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -57,7 +64,9 @@ class BudgetCategoryCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Remaining: UGX ${category.remainingAmount.toStringAsFixed(0)}',
+                'Remaining: ${currency != null 
+                  ? CurrencyFormatter.formatCurrency(category.remainingAmount, currency)
+                  : CurrencyFormatter.formatUGX(category.remainingAmount)}',
                 style: TextStyle(
                   fontSize: 12,
                   color: category.remainingAmount < 0 ? Colors.red : Colors.grey,
@@ -72,7 +81,9 @@ class BudgetCategoryCard extends StatelessWidget {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text(
-                          'Spent: UGX ${category.spentAmount.toStringAsFixed(0)}',
+                          'Spent: ${currency != null 
+                            ? CurrencyFormatter.formatCurrency(category.spentAmount, currency)
+                            : CurrencyFormatter.formatUGX(category.spentAmount)}',
                           style: const TextStyle(
                             fontSize: 12,
                             color: Colors.grey,

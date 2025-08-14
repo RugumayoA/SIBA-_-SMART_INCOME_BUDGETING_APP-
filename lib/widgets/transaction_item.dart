@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import 'package:intl/intl.dart';
+import '../utils/currency_formatter.dart';
 
 class TransactionItem extends StatelessWidget {
   final TransactionModel transaction;
@@ -14,6 +16,8 @@ class TransactionItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<AppProvider>(context);
+    final currency = provider.currentProject?.currency;
     final dateFormat = DateFormat('MMM dd');
     final formattedDate = dateFormat.format(transaction.date);
     
@@ -47,7 +51,9 @@ class TransactionItem extends StatelessWidget {
           ),
         ),
         trailing: Text(
-          'UGX ${transaction.amount.toStringAsFixed(0)}',
+          currency != null 
+            ? CurrencyFormatter.formatCurrency(transaction.amount, currency)
+            : CurrencyFormatter.formatUGX(transaction.amount),
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: transaction.isExpense ? Colors.red : Colors.green,

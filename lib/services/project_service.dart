@@ -46,6 +46,7 @@ class ProjectService {
         'color': project.color.value,
         'totalBudget': project.totalBudget,
         'currentBalance': project.currentBalance,
+        'currency': project.currency.toJson(),
       });
 
       return docRef.id;
@@ -70,6 +71,7 @@ class ProjectService {
         'color': project.color.value,
         'totalBudget': project.totalBudget,
         'currentBalance': project.currentBalance,
+        'currency': project.currency.toJson(),
       });
     } catch (e) {
       print('Error updating project: $e');
@@ -79,20 +81,23 @@ class ProjectService {
   // Delete project
   static Future<void> deleteProject(String projectId) async {
     try {
-      // Delete project document
-      await _firestore
+      final projectRef = _firestore
           .collection('users')
           .doc(_currentUserId)
           .collection('projects')
-          .doc(projectId)
-          .delete();
+          .doc(projectId);
 
-      // Delete all categories in this project
-      final categoriesSnapshot = await _firestore
-          .collection('users')
-          .doc(_currentUserId)
-          .collection('projects')
-          .doc(projectId)
+      // Delete all transactions in this project FIRST
+      final transactionsSnapshot = await projectRef
+          .collection('transactions')
+          .get();
+
+      for (var doc in transactionsSnapshot.docs) {
+        await doc.reference.delete();
+      }
+
+      // Delete all categories in this project SECOND
+      final categoriesSnapshot = await projectRef
           .collection('categories')
           .get();
 
@@ -100,20 +105,13 @@ class ProjectService {
         await doc.reference.delete();
       }
 
-      // Delete all transactions in this project
-      final transactionsSnapshot = await _firestore
-          .collection('users')
-          .doc(_currentUserId)
-          .collection('projects')
-          .doc(projectId)
-          .collection('transactions')
-          .get();
-
-      for (var doc in transactionsSnapshot.docs) {
-        await doc.reference.delete();
-      }
+      // Delete project document LAST
+      await projectRef.delete();
+      
+      print('Project $projectId deleted successfully');
     } catch (e) {
       print('Error deleting project: $e');
+      rethrow; // Rethrow to allow proper error handling upstream
     }
   }
 } 

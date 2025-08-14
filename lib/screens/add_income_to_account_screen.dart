@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
+import '../utils/currency_formatter.dart';
+import '../models/currency.dart';
 
 class AddIncomeToAccountScreen extends StatefulWidget {
   final String? selectedCategoryId;
@@ -54,6 +56,7 @@ class _AddIncomeToAccountScreenState extends State<AddIncomeToAccountScreen> {
       ),
       body: Consumer<AppProvider>(
         builder: (context, provider, child) {
+        final currency = provider.currentProject?.currency ?? Currencies.ugx;
           // Update selected category
           if (_selectedCategoryId != null) {
             _selectedCategory = provider.categories.firstWhere(
@@ -110,7 +113,7 @@ class _AddIncomeToAccountScreenState extends State<AddIncomeToAccountScreen> {
                                 ),
                               ),
                               subtitle: Text(
-                                'Current Balance: UGX ${category.currentBalance.toStringAsFixed(0)}',
+                                'Current Balance: ${CurrencyFormatter.formatCurrency(category.currentBalance, currency)}',
                                 style: const TextStyle(color: Colors.grey),
                               ),
                               trailing: isSelected ? const Icon(Icons.check, color: Colors.green) : null,
@@ -130,10 +133,10 @@ class _AddIncomeToAccountScreenState extends State<AddIncomeToAccountScreen> {
                         TextFormField(
                           controller: _amountController,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Income Amount',
-                            prefixText: 'UGX ',
-                            border: OutlineInputBorder(),
+                            prefixText: '${currency.symbol} ',
+                            border: const OutlineInputBorder(),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {

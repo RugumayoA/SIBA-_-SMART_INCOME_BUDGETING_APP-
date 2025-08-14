@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../models/project.dart';
+import '../models/currency.dart';
+import '../services/currency_service.dart';
+import '../utils/currency_formatter.dart';
 import '../screens/home_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../services/auth_service.dart';
@@ -27,6 +30,11 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
             icon: const Icon(Icons.refresh),
             onPressed: () => _refreshData(context),
             tooltip: 'Refresh Projects',
+          ),
+          IconButton(
+            icon: const Icon(Icons.build, color: Colors.orange),
+            onPressed: () => _fixProjectBudgets(context),
+            tooltip: 'Fix Project Budgets',
           ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.red),
@@ -237,7 +245,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    'Budget: UGX ${project.totalBudget.toStringAsFixed(0)}',
+                                    'Budget: ${CurrencyFormatter.formatCurrency(project.totalBudget, project.currency)}',
                                     style: TextStyle(
                                       color: Colors.grey[600],
                                       fontSize: 14,
@@ -334,7 +342,8 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final nameController = TextEditingController();
     final descriptionController = TextEditingController();
     Color selectedColor = Colors.blue;
-    double budgetAmount = 0; // Start with 0 UGX
+    double budgetAmount = 0; // Start with 0
+    Currency selectedCurrency = CurrencyService.getDefaultCurrency();
 
     showDialog(
       context: context,
@@ -362,12 +371,46 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   maxLines: 3,
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  initialValue: budgetAmount.toStringAsFixed(0),
+                // Currency Selection
+                DropdownButtonFormField<Currency>(
+                  value: selectedCurrency,
                   decoration: const InputDecoration(
-                    labelText: 'Initial Budget (UGX)',
+                    labelText: 'Currency',
                     border: OutlineInputBorder(),
-                    prefixText: 'UGX ',
+                  ),
+                  items: CurrencyService.getRecommendedCurrencies().map((currency) {
+                    return DropdownMenuItem<Currency>(
+                      value: currency,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(currency.symbol),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              CurrencyService.getCurrencyDisplayName(currency),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (Currency? newCurrency) {
+                    if (newCurrency != null) {
+                      setState(() {
+                        selectedCurrency = newCurrency;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  initialValue: CurrencyFormatter.formatAmount(budgetAmount),
+                  decoration: InputDecoration(
+                    labelText: 'Initial Budget (${selectedCurrency.code})',
+                    border: const OutlineInputBorder(),
+                    prefixText: '${selectedCurrency.symbol} ',
                   ),
                   keyboardType: TextInputType.number,
                   onChanged: (value) {
@@ -430,6 +473,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   color: selectedColor,
                   totalBudget: budgetAmount,
                   currentBalance: budgetAmount,
+                  currency: selectedCurrency,
                 );
 
                 final provider = Provider.of<AppProvider>(context, listen: false);
@@ -472,6 +516,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
     final descriptionController = TextEditingController(text: project.description);
     Color selectedColor = project.color;
     double budgetAmount = project.totalBudget;
+    Currency selectedCurrency = project.currency;
 
     showDialog(
       context: context,
@@ -499,12 +544,46 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   maxLines: 3,
                 ),
                 const SizedBox(height: 16),
-                TextFormField(
-                  initialValue: budgetAmount.toStringAsFixed(0),
+                // Currency Selection
+                DropdownButtonFormField<Currency>(
+                  value: selectedCurrency,
                   decoration: const InputDecoration(
-                    labelText: 'Total Budget (UGX)',
+                    labelText: 'Currency',
                     border: OutlineInputBorder(),
-                    prefixText: 'UGX ',
+                  ),
+                  items: CurrencyService.getRecommendedCurrencies().map((currency) {
+                    return DropdownMenuItem<Currency>(
+                      value: currency,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(currency.symbol),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              CurrencyService.getCurrencyDisplayName(currency),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (Currency? newCurrency) {
+                    if (newCurrency != null) {
+                      setState(() {
+                        selectedCurrency = newCurrency;
+                      });
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  initialValue: CurrencyFormatter.formatAmount(budgetAmount),
+                  decoration: InputDecoration(
+                    labelText: 'Total Budget (${selectedCurrency.code})',
+                    border: const OutlineInputBorder(),
+                    prefixText: '${selectedCurrency.symbol} ',
                   ),
                   keyboardType: TextInputType.number,
                   onChanged: (value) {
@@ -564,6 +643,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
                   description: descriptionController.text.trim(),
                   color: selectedColor,
                   totalBudget: budgetAmount,
+                  currency: selectedCurrency,
                   lastModified: DateTime.now(),
                 );
 
@@ -595,6 +675,7 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
       description: project.description,
       createdAt: DateTime.now(),
       color: project.color,
+      currency: project.currency,
       totalBudget: project.totalBudget,
       currentBalance: project.currentBalance,
     );
@@ -636,17 +717,57 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
           ),
           ElevatedButton(
             onPressed: () async {
-              final provider = Provider.of<AppProvider>(context, listen: false);
-              await provider.deleteProject(project.id);
-
-              if (context.mounted) {
+              try {
+                final provider = Provider.of<AppProvider>(context, listen: false);
+                
+                // Close dialog first to prevent navigation issues
                 Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Project deleted successfully!'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
+                
+                // Show loading indicator
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Row(
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 16),
+                          Text('Deleting project...'),
+                        ],
+                      ),
+                      duration: Duration(seconds: 30),
+                    ),
+                  );
+                }
+                
+                await provider.deleteProject(project.id);
+
+                if (context.mounted) {
+                  // Clear any existing snackbars
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Project deleted successfully!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  // Clear loading snackbar
+                  ScaffoldMessenger.of(context).clearSnackBars();
+                  
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Error deleting project: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
@@ -709,6 +830,51 @@ class _ProjectsScreenState extends State<ProjectsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to refresh projects: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _fixProjectBudgets(BuildContext context) async {
+    final provider = Provider.of<AppProvider>(context, listen: false);
+    
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              ),
+              SizedBox(width: 16),
+              Text('Fixing project budgets...'),
+            ],
+          ),
+          duration: Duration(seconds: 5),
+        ),
+      );
+
+      await provider.fixAllProjectBudgets();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Project budgets fixed successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to fix project budgets: ${e.toString()}'),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),

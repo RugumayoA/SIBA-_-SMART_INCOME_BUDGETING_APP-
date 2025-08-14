@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
+import '../utils/currency_formatter.dart';
+import '../models/currency.dart';
 
 class ManageAccountsScreen extends StatefulWidget {
   const ManageAccountsScreen({super.key});
@@ -50,7 +52,11 @@ class _ManageAccountsScreenState extends State<ManageAccountsScreen> {
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) {
+        final provider = context.read<AppProvider>();
+        final currency = provider.currentProject?.currency ?? Currencies.ugx;
+        
+        return AlertDialog(
         title: Text(category != null ? 'Edit Account' : 'Add New Account'),
         content: Form(
           key: _formKey,
@@ -74,10 +80,11 @@ class _ManageAccountsScreenState extends State<ManageAccountsScreen> {
               TextFormField(
                 controller: _amountController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Allocated Amount',
-                  prefixText: 'UGX ',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: 'Current Balance',
+                  prefixText: '${currency.symbol} ',
+                  border: const OutlineInputBorder(),
+                  helperText: 'Amount currently available in this category',
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -133,7 +140,8 @@ class _ManageAccountsScreenState extends State<ManageAccountsScreen> {
             child: Text(category != null ? 'Update' : 'Add'),
           ),
         ],
-      ),
+        );
+      },
     );
   }
 
@@ -222,6 +230,7 @@ class _ManageAccountsScreenState extends State<ManageAccountsScreen> {
       ),
       body: Consumer<AppProvider>(
         builder: (context, provider, child) {
+          final currency = provider.currentProject?.currency ?? Currencies.ugx;
           if (provider.categories.isEmpty) {
             return const Center(
               child: Column(
@@ -266,10 +275,10 @@ class _ManageAccountsScreenState extends State<ManageAccountsScreen> {
                   subtitle: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('UGX ${category.allocatedAmount.toStringAsFixed(0)} allocated'),
+                      Text('${CurrencyFormatter.formatCurrency(category.allocatedAmount, currency)} available'),
                       if (category.allocatedAmount > 0)
                         Text(
-                          'UGX ${category.spentAmount.toStringAsFixed(0)} spent (${category.spentPercentage.toStringAsFixed(1)}%)',
+                          '${CurrencyFormatter.formatCurrency(category.spentAmount, currency)} spent (${category.spentPercentage.toStringAsFixed(1)}%)',
                           style: TextStyle(
                             color: category.spentPercentage > 80 ? Colors.red : Colors.grey,
                           ),

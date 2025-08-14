@@ -5,11 +5,13 @@ import '../providers/app_provider.dart';
 import '../services/auth_service.dart';
 import '../widgets/budget_category_card.dart';
 import '../widgets/transaction_item.dart';
+import '../utils/currency_formatter.dart';
 import '../screens/add_income_screen.dart';
 import '../screens/add_expense_screen.dart';
 import '../screens/manage_accounts_screen.dart';
 import '../screens/add_income_to_account_screen.dart';
 import '../screens/transaction_history_screen.dart';
+import '../screens/reports_screen.dart';
 import '../screens/projects_screen.dart';
 import '../screens/auth/login_screen.dart';
 
@@ -55,125 +57,120 @@ class HomeScreen extends StatelessWidget {
                 ],
               ],
             ),
-            leading: IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ProjectsScreen(),
-                  ),
-                );
-              },
-              tooltip: 'Back to Projects',
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.folder),
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ProjectsScreen(),
-                    ),
-                  );
-                },
-                tooltip: 'Switch Project',
-              ),
-              IconButton(
-                icon: const Icon(Icons.account_balance_wallet),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const ManageAccountsScreen(),
-                    ),
-                  );
-                },
-                tooltip: 'Manage Accounts',
-              ),
-              IconButton(
-                icon: const Icon(Icons.notifications),
-                onPressed: () {
-                  // TODO: Implement notifications
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                onPressed: () => _refreshData(context),
-                tooltip: 'Refresh Data',
-              ),
-              IconButton(
-                icon: const Icon(Icons.logout, color: Colors.red),
-                onPressed: () => _handleLogout(context),
-                tooltip: 'Logout',
-              ),
-            ],
+            // automaticallyImplyLeading: true will show the hamburger menu for the drawer
           ),
           drawer: Drawer(
-            child: ListView(
-              padding: EdgeInsets.zero,
+            width: MediaQuery.of(context).size.width > 600 ? 300 : 280, // Responsive width
+            child: Column(
               children: [
-                DrawerHeader(
+                // Custom Header
+                Container(
+                  width: double.infinity,
+                  height: 200,
                   decoration: BoxDecoration(
-                    color: provider.currentProject?.color ?? Colors.blue,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        provider.currentProject?.color ?? Colors.blue,
+                        (provider.currentProject?.color ?? Colors.blue).withOpacity(0.8),
+                      ],
+                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const CircleAvatar(
-                        radius: 30,
-                        backgroundColor: Colors.white,
-                        child: Icon(Icons.folder, size: 35, color: Colors.blue),
-                      ),
-                      const SizedBox(height: 10),
-                      Text(
-                        provider.currentProject?.name ?? 'SIBA Budget Manager',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        provider.currentProject?.description ?? 'Manage your finances',
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.8),
-                          fontSize: 14,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 10),
-                      // Show current user email
-                      if (FirebaseAuth.instance.currentUser != null) ...[
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
+                  child: SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              const Icon(Icons.email, color: Colors.white, size: 16),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  FirebaseAuth.instance.currentUser!.email ?? 'Unknown',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
+                              CircleAvatar(
+                                radius: 25,
+                                backgroundColor: Colors.white,
+                                child: Icon(
+                                  Icons.folder,
+                                  size: 30,
+                                  color: provider.currentProject?.color ?? Colors.blue,
                                 ),
+                              ),
+                              const Spacer(),
+                              // Close drawer button for better UX
+                              IconButton(
+                                icon: const Icon(Icons.close, color: Colors.white),
+                                onPressed: () => Navigator.pop(context),
+                                tooltip: 'Close menu',
                               ),
                             ],
                           ),
-                        ),
-                      ],
-                    ],
+                          const SizedBox(height: 12),
+                          Text(
+                            provider.currentProject?.name ?? 'SIBA Budget Manager',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            provider.currentProject?.description ?? 'Manage your finances smartly',
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 14,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 12),
+                          // User info
+                          if (FirebaseAuth.instance.currentUser != null) ...[
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.person, color: Colors.white, size: 16),
+                                  const SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      FirebaseAuth.instance.currentUser!.email ?? 'Unknown User',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
                   ),
+                ),
+                // Scrollable menu items
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    children: [
+                // Main Navigation Section
+                ListTile(
+                  leading: const Icon(Icons.dashboard),
+                  title: const Text('Dashboard'),
+                  selected: true,
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
                 ),
                 ListTile(
                   leading: const Icon(Icons.folder),
@@ -189,92 +186,162 @@ class HomeScreen extends StatelessWidget {
                   },
                 ),
                 const Divider(),
+                
+                // Account & Transaction Management
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(
+                    'MANAGE',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ),
                 ListTile(
-                  leading: const Icon(Icons.dashboard),
-                  title: const Text('Dashboard'),
-                  selected: true,
+                  leading: const Icon(Icons.account_balance_wallet),
+                  title: const Text('Manage Accounts'),
                   onTap: () {
                     Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ManageAccountsScreen(),
+                      ),
+                    );
                   },
                 ),
-            ListTile(
-              leading: const Icon(Icons.account_balance_wallet),
-              title: const Text('Manage Accounts'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ManageAccountsScreen(),
+                ListTile(
+                  leading: const Icon(Icons.add, color: Colors.green),
+                  title: const Text('Add Income'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddIncomeScreen(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.remove, color: Colors.red),
+                  title: const Text('Add Expense'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const AddExpenseScreen(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.history),
+                  title: const Text('Transaction History'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TransactionHistoryScreen(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.assessment),
+                  title: const Text('Reports & Analytics'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const ReportsScreen(),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(),
+                
+                // Tools Section
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Text(
+                    'TOOLS',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
+                    ),
                   ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.add),
-              title: const Text('Add Income'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AddIncomeScreen(),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.notifications),
+                  title: const Text('Notifications'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // TODO: Implement notifications
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Notifications feature coming soon!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.refresh),
+                  title: const Text('Refresh Data'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _refreshData(context);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.settings),
+                  title: const Text('Settings'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // TODO: Navigate to settings screen
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Settings feature coming soon!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.help),
+                  title: const Text('Help & Support'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    // TODO: Navigate to help screen
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Help & Support feature coming soon!'),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  },
+                ),
+                const Divider(),
+                
+                // Account Section
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Colors.red),
+                  title: const Text('Logout', style: TextStyle(color: Colors.red)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _handleLogout(context);
+                  },
+                ),
+                    ],
                   ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.remove),
-              title: const Text('Add Expense'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const AddExpenseScreen(),
-                  ),
-                );
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.history),
-              title: const Text('Transaction History'),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const TransactionHistoryScreen(),
-                  ),
-                );
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.logout, color: Colors.red),
-              title: const Text('Logout', style: TextStyle(color: Colors.red)),
-              onTap: () {
-                Navigator.pop(context);
-                _handleLogout(context);
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text('Settings'),
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Navigate to settings screen
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.help),
-              title: const Text('Help & Support'),
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Navigate to help screen
-              },
-            ),
+                ),
               ],
             ),
           ),
@@ -304,7 +371,9 @@ class HomeScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'UGX ${provider.totalMoney.toStringAsFixed(0)}',
+                        provider.currentProject != null 
+                          ? CurrencyFormatter.formatCurrency(provider.totalMoney, provider.currentProject!.currency)
+                          : CurrencyFormatter.formatUGX(provider.totalMoney),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 28,
@@ -315,7 +384,9 @@ class HomeScreen extends StatelessWidget {
                       Row(
                         children: [
                           Text(
-                            'Available: UGX ${provider.totalAvailable.toStringAsFixed(0)}',
+                            'Available: ${provider.currentProject != null 
+                              ? CurrencyFormatter.formatCurrency(provider.totalAvailable, provider.currentProject!.currency)
+                              : CurrencyFormatter.formatUGX(provider.totalAvailable)}',
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 14,
@@ -323,7 +394,9 @@ class HomeScreen extends StatelessWidget {
                           ),
                           const SizedBox(width: 16),
                           Text(
-                            'Spent: UGX ${provider.totalSpent.toStringAsFixed(0)}',
+                            'Spent: ${provider.currentProject != null 
+                              ? CurrencyFormatter.formatCurrency(provider.totalSpent, provider.currentProject!.currency)
+                              : CurrencyFormatter.formatUGX(provider.totalSpent)}',
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 14,
@@ -424,7 +497,7 @@ class HomeScreen extends StatelessWidget {
                 
                 const SizedBox(height: 24),
                 
-                // Add Income Button
+                // Add Category Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
@@ -432,13 +505,13 @@ class HomeScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const AddIncomeScreen(),
+                          builder: (context) => const ManageAccountsScreen(),
                         ),
                       );
                     },
                     icon: const Icon(Icons.add, color: Colors.white),
                     label: const Text(
-                      'Add Income',
+                      'Add Category',
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -452,6 +525,69 @@ class HomeScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+                ),
+                
+                const SizedBox(height: 24),
+
+                // Quick Actions Section
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const ReportsScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.assessment, color: Colors.white),
+                        label: const Text(
+                          'View Reports',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.purple,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const TransactionHistoryScreen(),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.history, color: Colors.white),
+                        label: const Text(
+                          'View History',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.indigo,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
                 
                 const SizedBox(height: 24),

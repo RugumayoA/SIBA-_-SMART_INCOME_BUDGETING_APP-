@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
+import '../utils/currency_formatter.dart';
+import '../models/currency.dart';
 
 class AddIncomeScreen extends StatefulWidget {
   const AddIncomeScreen({super.key});
@@ -73,6 +75,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
       ),
       body: Consumer<AppProvider>(
         builder: (context, provider, child) {
+          final currency = provider.currentProject?.currency ?? Currencies.ugx;
           return Form(
             key: _formKey,
             child: Column(
@@ -87,10 +90,10 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                         TextFormField(
                           controller: _amountController,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Total Income Amount',
-                            prefixText: 'UGX ',
-                            border: OutlineInputBorder(),
+                            prefixText: '${currency.symbol} ',
+                            border: const OutlineInputBorder(),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -130,7 +133,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                               keyboardType: TextInputType.number,
                               decoration: InputDecoration(
                                 labelText: '${category.name} Allocation',
-                                prefixText: 'UGX ',
+                                prefixText: '${currency.symbol} ',
                                 border: const OutlineInputBorder(),
                                 suffixIcon: Container(
                                   width: 16,
@@ -175,7 +178,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                                 children: [
                                   const Text('Total Income:'),
                                   Text(
-                                    'UGX ${_totalIncome.toStringAsFixed(0)}',
+                                    CurrencyFormatter.formatCurrency(_totalIncome, currency),
                                     style: const TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                 ],
@@ -186,7 +189,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                                 children: [
                                   const Text('Allocated:'),
                                   Text(
-                                    'UGX ${_allocatedAmount.toStringAsFixed(0)}',
+                                    CurrencyFormatter.formatCurrency(_allocatedAmount, currency),
                                     style: const TextStyle(fontWeight: FontWeight.bold),
                                   ),
                                 ],
@@ -197,7 +200,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                                 children: [
                                   const Text('Remaining:'),
                                   Text(
-                                    'UGX ${(_totalIncome - _allocatedAmount).toStringAsFixed(0)}',
+                                    CurrencyFormatter.formatCurrency(_totalIncome - _allocatedAmount, currency),
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       color: (_totalIncome - _allocatedAmount) < 0 
@@ -217,7 +220,7 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
                             child: Text(
                               _allocatedAmount > _totalIncome
                                   ? '⚠️ Allocated amount exceeds total income'
-                                  : 'ℹ️ ${(_totalIncome - _allocatedAmount).toStringAsFixed(0)} UGX not allocated',
+                                  : 'ℹ️ ${CurrencyFormatter.formatCurrency(_totalIncome - _allocatedAmount, currency)} not allocated',
                               style: TextStyle(
                                 color: _allocatedAmount > _totalIncome ? Colors.red : Colors.orange,
                                 fontWeight: FontWeight.w500,
@@ -266,14 +269,17 @@ class _AddIncomeScreenState extends State<AddIncomeScreen> {
     if (!_formKey.currentState!.validate()) return;
     
     if (_allocatedAmount != _totalIncome) {
+      final provider = context.read<AppProvider>();
+      final currency = provider.currentProject?.currency ?? Currencies.ugx;
+      
       showDialog(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('Allocation Mismatch'),
           content: Text(
             _allocatedAmount > _totalIncome
-                ? 'Allocated amount (UGX ${_allocatedAmount.toStringAsFixed(0)}) exceeds total income (UGX ${_totalIncome.toStringAsFixed(0)}). Please adjust allocations.'
-                : 'Only UGX ${_allocatedAmount.toStringAsFixed(0)} out of UGX ${_totalIncome.toStringAsFixed(0)} is allocated. Do you want to continue?',
+                ? 'Allocated amount (${CurrencyFormatter.formatCurrency(_allocatedAmount, currency)}) exceeds total income (${CurrencyFormatter.formatCurrency(_totalIncome, currency)}). Please adjust allocations.'
+                : 'Only ${CurrencyFormatter.formatCurrency(_allocatedAmount, currency)} out of ${CurrencyFormatter.formatCurrency(_totalIncome, currency)} is allocated. Do you want to continue?',
           ),
           actions: [
             TextButton(

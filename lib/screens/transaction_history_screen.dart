@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import 'package:intl/intl.dart';
+import '../utils/currency_formatter.dart';
+import '../models/currency.dart';
 
 class TransactionHistoryScreen extends StatefulWidget {
   final String? categoryId;
@@ -103,6 +105,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
       ),
       body: Consumer<AppProvider>(
         builder: (context, provider, child) {
+        final currency = provider.currentProject?.currency ?? Currencies.ugx;
           final allTransactions = provider.getAllTransactions();
           final transactions = selectedCategoryId != null 
               ? provider.getTransactionsForCategory(selectedCategoryId!)
@@ -185,7 +188,7 @@ class _TransactionHistoryScreenState extends State<TransactionHistoryScreen> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        'UGX ${transaction.amount.toStringAsFixed(0)}',
+                        CurrencyFormatter.formatCurrency(transaction.amount, currency),
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 16,

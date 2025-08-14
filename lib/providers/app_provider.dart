@@ -5,6 +5,7 @@ import '../services/project_service.dart';
 import '../services/auth_service.dart';
 import '../models/project.dart';
 
+
 class BudgetCategory {
   final String id;
   final String name;
@@ -22,8 +23,8 @@ class BudgetCategory {
     required this.color,
   });
 
-  double get remainingAmount => allocatedAmount - spentAmount;
-  double get spentPercentage => allocatedAmount > 0 ? (spentAmount / allocatedAmount) * 100 : 0;
+  double get remainingAmount => currentBalance;
+  double get spentPercentage => (allocatedAmount + spentAmount) > 0 ? (spentAmount / (allocatedAmount + spentAmount)) * 100 : 0;
 
   Map<String, dynamic> toJson() {
     return {
@@ -195,6 +196,9 @@ class AppProvider extends ChangeNotifier {
         for (var transaction in _transactions) {
           print('  📄 Transaction: ${transaction.description} - ${transaction.amount} (${transaction.isExpense ? "Expense" : "Income"})');
         }
+        
+        // Update project budget to sync with category totals
+        await _updateProjectBudgetFromCategories();
       }
       
       print('Data loaded successfully from Firebase');
@@ -215,6 +219,29 @@ class AppProvider extends ChangeNotifier {
     } else {
       print('Cannot reload data: User not authenticated');
     }
+  }
+
+  // Public method to fix budget display for existing projects
+  Future<void> fixAllProjectBudgets() async {
+    print('🔧 Fixing all project budgets...');
+    
+    for (var project in _projects) {
+      // Select each project temporarily to calculate its budget
+      final originalProject = _currentProject;
+      
+      _currentProject = project;
+      _categories = await FirebaseService.getCategories(project.id);
+      await _updateProjectBudgetFromCategories();
+      
+      // Restore original current project
+      _currentProject = originalProject;
+      if (_currentProject != null) {
+        _categories = await FirebaseService.getCategories(_currentProject!.id);
+      }
+    }
+    
+    print('✅ All project budgets fixed');
+    notifyListeners();
   }
 
   Future<void> toggleTheme() async {
@@ -248,7 +275,7 @@ class AppProvider extends ChangeNotifier {
       _categories[categoryIndex] = BudgetCategory(
         id: _categories[categoryIndex].id,
         name: _categories[categoryIndex].name,
-        allocatedAmount: _categories[categoryIndex].allocatedAmount,
+        allocatedAmount: newBalance, // Update allocated amount to reflect current status
         spentAmount: _categories[categoryIndex].spentAmount,
         currentBalance: newBalance,
         color: _categories[categoryIndex].color,
@@ -285,6 +312,9 @@ class AppProvider extends ChangeNotifier {
       print('❌ No current project found, cannot save INCOME transaction');
     }
 
+    // Update project budget and balance
+    await _updateProjectBudgetFromCategories();
+
     print('📊 INCOME Transaction added: ${transaction.id}');
     print('📊 Total transactions: ${_transactions.length}');
     print('📊 Data saved to Firebase');
@@ -312,7 +342,7 @@ class AppProvider extends ChangeNotifier {
       _categories[categoryIndex] = BudgetCategory(
         id: _categories[categoryIndex].id,
         name: _categories[categoryIndex].name,
-        allocatedAmount: _categories[categoryIndex].allocatedAmount,
+        allocatedAmount: newBalance, // Update allocated amount to reflect current status
         spentAmount: newSpent,
         currentBalance: newBalance, // Update the balance
         color: _categories[categoryIndex].color,
@@ -349,6 +379,9 @@ class AppProvider extends ChangeNotifier {
       print('❌ No current project found, cannot save EXPENSE transaction');
     }
 
+    // Update project budget and balance
+    await _updateProjectBudgetFromCategories();
+
     print('📊 EXPENSE Transaction added: ${transaction.id}');
     print('📊 Total transactions: ${_transactions.length}');
     print('📊 Data saved to Firebase');
@@ -364,12 +397,13 @@ class AppProvider extends ChangeNotifier {
     for (var entry in allocations.entries) {
       final categoryIndex = _categories.indexWhere((c) => c.id == entry.key);
       if (categoryIndex != -1) {
+        final newBalance = _categories[categoryIndex].currentBalance + entry.value;
         _categories[categoryIndex] = BudgetCategory(
           id: _categories[categoryIndex].id,
           name: _categories[categoryIndex].name,
-          allocatedAmount: _categories[categoryIndex].allocatedAmount + entry.value,
+          allocatedAmount: newBalance, // Update allocated amount to reflect current status
           spentAmount: _categories[categoryIndex].spentAmount,
-          currentBalance: _categories[categoryIndex].currentBalance + entry.value,
+          currentBalance: newBalance,
           color: _categories[categoryIndex].color,
         );
         
@@ -397,6 +431,9 @@ class AppProvider extends ChangeNotifier {
       await FirebaseService.saveTransaction(transaction, _currentProject!.id);
     }
 
+    // Update project budget and balance
+    await _updateProjectBudgetFromCategories();
+
     notifyListeners();
   }
 
@@ -420,6 +457,9 @@ class AppProvider extends ChangeNotifier {
       await FirebaseService.saveCategory(category, _currentProject!.id);
     }
     
+    // Update project budget and balance
+    await _updateProjectBudgetFromCategories();
+    
     notifyListeners();
   }
 
@@ -435,22 +475,16 @@ class AppProvider extends ChangeNotifier {
       print('New allocated amount: $allocatedAmount');
       print('Old current balance: ${_categories[categoryIndex].currentBalance}');
       
-      // Calculate the difference in allocated amount
-      final oldAllocated = _categories[categoryIndex].allocatedAmount;
-      final allocationDifference = allocatedAmount - oldAllocated;
-      
-      // Update current balance by the difference in allocation
-      final newCurrentBalance = _categories[categoryIndex].currentBalance + allocationDifference;
-      
-      print('Allocation difference: $allocationDifference');
-      print('New current balance: $newCurrentBalance');
+      // The allocatedAmount parameter now represents the new current balance for the category
+      print('Old current balance: ${_categories[categoryIndex].currentBalance}');
+      print('New current balance: $allocatedAmount');
       
       _categories[categoryIndex] = BudgetCategory(
         id: id,
         name: name,
-        allocatedAmount: allocatedAmount,
+        allocatedAmount: allocatedAmount, // This now represents current balance
         spentAmount: _categories[categoryIndex].spentAmount,
-        currentBalance: newCurrentBalance,
+        currentBalance: allocatedAmount, // Keep both values in sync
         color: color,
       );
       
@@ -458,6 +492,9 @@ class AppProvider extends ChangeNotifier {
       if (_currentProject != null) {
         await FirebaseService.updateCategory(_categories[categoryIndex], _currentProject!.id);
       }
+      
+      // Update project budget and balance
+      await _updateProjectBudgetFromCategories();
       
       print('Category updated in Firebase');
       print('Total money after update: $totalMoney');
@@ -468,6 +505,47 @@ class AppProvider extends ChangeNotifier {
     }
   }
 
+  // Helper method to update project budget based on category totals
+  Future<void> _updateProjectBudgetFromCategories() async {
+    if (_currentProject == null) {
+      print('❌ No current project to update');
+      return;
+    }
+
+    // Calculate total budget from all category allocated amounts
+    final calculatedTotalBudget = _categories.fold(0.0, (sum, category) => sum + category.allocatedAmount);
+    
+    // Calculate current balance from all category current balances
+    final calculatedCurrentBalance = _categories.fold(0.0, (sum, category) => sum + category.currentBalance);
+    
+    print('🔄 Updating project budget:');
+    print('  📊 Old total budget: ${_currentProject!.totalBudget}');
+    print('  📊 New total budget: $calculatedTotalBudget');
+    print('  📊 Old current balance: ${_currentProject!.currentBalance}');
+    print('  📊 New current balance: $calculatedCurrentBalance');
+    
+    // Update current project with new values
+    _currentProject = _currentProject!.copyWith(
+      totalBudget: calculatedTotalBudget,
+      currentBalance: calculatedCurrentBalance,
+      lastModified: DateTime.now(),
+    );
+    
+    // Update in projects list
+    final projectIndex = _projects.indexWhere((p) => p.id == _currentProject!.id);
+    if (projectIndex != -1) {
+      _projects[projectIndex] = _currentProject!;
+    }
+    
+    // Save updated project to Firebase
+    try {
+      await ProjectService.updateProject(_currentProject!);
+      print('✅ Project budget updated in Firebase successfully');
+    } catch (e) {
+      print('❌ Error updating project budget in Firebase: $e');
+    }
+  }
+
   Future<void> deleteCategory(String id) async {
     _categories.removeWhere((c) => c.id == id);
     
@@ -475,6 +553,9 @@ class AppProvider extends ChangeNotifier {
     if (_currentProject != null) {
       await FirebaseService.deleteCategory(id, _currentProject!.id);
     }
+    
+    // Update project budget and balance
+    await _updateProjectBudgetFromCategories();
     
     notifyListeners();
   }
@@ -514,6 +595,10 @@ class AppProvider extends ChangeNotifier {
     if (_currentProject != null) {
       _categories = await FirebaseService.getCategories(_currentProject!.id);
       _transactions = await FirebaseService.getTransactions(_currentProject!.id);
+      
+      // Update project budget to sync with category totals
+      await _updateProjectBudgetFromCategories();
+      
       notifyListeners();
     }
   }
@@ -531,11 +616,30 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> deleteProject(String projectId) async {
-    await ProjectService.deleteProject(projectId);
-    _projects.removeWhere((p) => p.id == projectId);
-    if (_currentProject?.id == projectId) {
-      _currentProject = _projects.isNotEmpty ? _projects.first : null;
+    try {
+      await ProjectService.deleteProject(projectId);
+      
+      // Only update local state if deletion was successful
+      _projects.removeWhere((p) => p.id == projectId);
+      
+      // If we deleted the current project, switch to another one or null
+      if (_currentProject?.id == projectId) {
+        _currentProject = _projects.isNotEmpty ? _projects.first : null;
+        
+        // Clear categories and transactions if no current project
+        if (_currentProject == null) {
+          _categories.clear();
+          _transactions.clear();
+        } else {
+          // Load data for the new current project
+          await _loadData();
+        }
+      }
+      
+      notifyListeners();
+    } catch (e) {
+      print('Error in deleteProject: $e');
+      rethrow; // Rethrow to allow UI to handle the error
     }
-    notifyListeners();
   }
 } 
